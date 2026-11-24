@@ -11,7 +11,11 @@ def save_report(vacancies, issues_dict, mode, model, report_path):
     }
 
     for v in vacancies:
-        v_id = v['id']
+        v_id = v.get("id") 
+        # на всякий пожарный
+        if not v_id:
+            continue
+
         report_data["vacancies"].append({
             "id": v_id,
             "url": v.get("vac_url", ""), 
