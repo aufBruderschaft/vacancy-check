@@ -7,8 +7,11 @@ class ApiError(Exception):
 
 
 def unwrap(data):
-    items = data.get('results', {}).get('vacancies', [])
-    return [item['vacancy'] for item in items if 'vacancy' in item]
+    if isinstance(data, list):
+        items = data
+    else:
+        items = data.get('results', {}).get('vacancies', [])
+    return [item.get('vacancy', item) for item in items if isinstance(item, dict)]
 
 def fetch_page(url, page, limit):
     try:
@@ -22,7 +25,7 @@ def fetch_page(url, page, limit):
     return unwrap(data)
 
 def fetch_vacancies(url, page_size, max_vacancies):
-    page_size = min(page_size, 100)
+    page_size = min(page_size, 100, max(1, (max_vacancies + 1) // 2))
     vacancies = []
     page = 0
     while len(vacancies) < max_vacancies:
