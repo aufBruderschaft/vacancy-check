@@ -55,9 +55,9 @@ def deduplicate_issues(issues):
     result = []
     
     for issue in sorted_issues:
-        # Ключ уникальности: тема + тип + поле
+        # Ключ уникальности: тема + тип + поле + цитата
         # (Если поля разные, но тема одна, например, график в schedule и qualification - они не схлопнутся. Но если поле одинаковое - схлопнутся).
-        key = (issue.get("topic"), issue.get("type"), issue.get("field"))
+        key = (issue.get("topic"), issue.get("type"), issue.get("field"), issue.get("quote"))
         
         if key not in seen:
             seen.add(key)

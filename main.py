@@ -56,27 +56,26 @@ def run_pipeline(raw_data, mode, cfg):
             logger.error(f"Ошибка в правилах для {v_id}: {e}")
 
         # LLM 
+        cache_key = f"{cfg['llm']['model']}:{v_hash}" if v_hash else None
         try:
-            if v_hash and v_hash in cache:
+            if cache_key and cache_key in cache:
                 # Хэш не изменился
-                # logger.info(f"LLM: кэш найден для {v_id}")
-                issues.extend(cache[v_hash])
+                issues.extend(cache[cache_key])
             else:
+                # None = модель не запускалась или упала. Такой результат НЕ кэшируем,
+                # иначе вакансия навсегда останется «проверенной» без проверки.
+                llm_issues = None
 
-                # ВРЕМЕННАЯ ЗАГЛУШКА 
-                llm_issues = [] 
-                
                 # ПРИМЕРНО БУДЕТ ТАК
-                # llm_issues = analyze_vacancy(v, cfg['llm'])
-                # или так
-                # llm_issues = validate_quotes(llm_issues, v)
-                
-                issues.extend(llm_issues)
-                
-                # Сохраняем в кэш
-                if v_hash:
-                    cache[v_hash] = llm_issues
-                    cache_updated = True
+                # if cfg['llm'].get('enabled'):
+                #     llm_issues = analyze_vacancy(v, cfg['llm'])
+                #     llm_issues = validate_quotes(llm_issues, v)
+
+                if llm_issues is not None:
+                    issues.extend(llm_issues)
+                    if cache_key:
+                        cache[cache_key] = llm_issues
+                        cache_updated = True
                     
         except Exception as e:
             logger.warning(f"Ошибка LLM для {v_id}, пропускаем: {e}")
@@ -124,20 +123,21 @@ def main():
     subparsers.add_parser("schedule", help="Работа по расписанию")
     args = parser.parse_args()
     cfg = load_config()
+    report_model = cfg['llm']['model'] if cfg['llm'].get('enabled') else None
 
     try:
         if args.command == "run":
             logger.info("Запуск через API...")
             raw = fetch_with_retries(cfg) 
             vacancies, issues = run_pipeline(raw, mode="api", cfg=cfg)
-            save_report(vacancies, issues, mode="api", model=cfg['llm']['model'], report_path=cfg['output']['report_path'])
+            save_report(vacancies, issues, mode="api", model=report_model, report_path=cfg['output']['report_path'])
             logger.info(f"Обработано вакансий: {len(issues)}")
 
         elif args.command == "check":
             logger.info(f"Запуск проверки файла: {args.input}")
             raw = load_local(args.input)
             vacancies, issues = run_pipeline(raw, mode="check", cfg=cfg)
-            save_report(vacancies, issues, mode="check", model=cfg['llm']['model'], report_path=cfg['output']['report_path'])
+            save_report(vacancies, issues, mode="check", model=report_model, report_path=cfg['output']['report_path'])
             logger.info(f"Обработано вакансий: {len(issues)}")
 
         elif args.command == "schedule":
@@ -149,7 +149,7 @@ def main():
                     logger.info("Плановая загрузка данных...")
                     raw = fetch_with_retries(cfg)
                     vacancies, issues = run_pipeline(raw, mode="api", cfg=cfg)
-                    save_report(vacancies, issues, mode="api", model=cfg['llm']['model'], report_path=cfg['output']['report_path'])
+                    save_report(vacancies, issues, mode="api", model=report_model, report_path=cfg['output']['report_path'])
                     logger.info(f"Плановый отчет сохранен. Ждем {hours} ч. ...")
                     time.sleep(hours * 3600)
                 except KeyboardInterrupt:

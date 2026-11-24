@@ -1,5 +1,5 @@
 source:
-  url:  http://localhost:9999
+  url: http://opendata.trudvsem.ru/api/v1/vacancies/region/39
   page_size: 100
   max_vacancies: 200
   max_retries: 3  
@@ -7,6 +7,7 @@ source:
 schedule:
   every_hours: 24
 llm:
+  enabled: false            # true, когда подключён llm.py
   base_url: http://localhost:11434/v1
   model: gemma4:e2b
   api_key_env: LLM_API_KEY
