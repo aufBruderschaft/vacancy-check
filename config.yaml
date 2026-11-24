@@ -1,0 +1,12 @@
+source:
+  url: http://opendata.trudvsem.ru/api/v1/vacancies/region/39
+  page_size: 100
+  max_vacancies: 200
+schedule:
+  every_hours: 24
+llm:
+  base_url: http://localhost:11434/v1
+  model: gemma4:e2b
+  api_key_env: LLM_API_KEY
+output:
+  report_path: reports/report.json
