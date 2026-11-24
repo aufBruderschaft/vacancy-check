@@ -3,13 +3,16 @@ import logging
 import argparse
 import time
 import yaml
+import json
+import os
 
-# Импорты для Льва
 from app.fetch import fetch_vacancies, load_local, ApiError
 from app.normalize import normalize_all
 from app.rules import check_rules
 
 from app.report import save_report
+
+CACHE_PATH = "reports/cache.json"
 
 # Настройка логов
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,12 +22,31 @@ def load_config(path="config.yaml"):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
+def load_cache():
+    if os.path.exists(CACHE_PATH):
+        try:
+            with open(CACHE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Не удалось прочитать кэш: {e}")
+            return {}
+    return {}
+
+def save_cache(cache):
+    os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+    with open(CACHE_PATH, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+
 def run_pipeline(raw_data, mode, cfg):
     vacancies = normalize_all(raw_data)
     all_issues = {}
+    
+    cache = load_cache()
+    cache_updated = False
 
     for v in vacancies:
         v_id = v['id']
+        v_hash = v.get('content_hash') 
         issues = []
 
         # Правила 
@@ -33,14 +55,41 @@ def run_pipeline(raw_data, mode, cfg):
         except Exception as e:
             logger.error(f"Ошибка в правилах для {v_id}: {e}")
 
-        # TODO: Сюда позже воткнем вызов LLM
-        # try:
-        #     
-        #     
-        # except Exception as e:
-        #     logger.warning(f"Ошибка LLM для {v_id}: {e}")
+        # LLM 
+        try:
+            if v_hash and v_hash in cache:
+                # Хэш не изменился
+                # logger.info(f"LLM: кэш найден для {v_id}")
+                issues.extend(cache[v_hash])
+            else:
 
-        all_issues[v_id] = issues
+                # ВРЕМЕННАЯ ЗАГЛУШКА 
+                llm_issues = [] 
+                
+                # ПРИМЕРНО БУДЕТ ТАК
+                # llm_issues = analyze_vacancy(v, cfg['llm'])
+                # или так
+                # llm_issues = validate_quotes(llm_issues, v)
+                
+                issues.extend(llm_issues)
+                
+                # Сохраняем в кэш
+                if v_hash:
+                    cache[v_hash] = llm_issues
+                    cache_updated = True
+                    
+        except Exception as e:
+            logger.warning(f"Ошибка LLM для {v_id}, пропускаем: {e}")
+
+        # 3. ДЕДУПЛИКАЦИЯ (импортируй функцию из report.py)
+        from app.report import deduplicate_issues
+        cleaned_issues = deduplicate_issues(issues)
+        
+        all_issues[v_id] = cleaned_issues
+
+    # Сохраняем обновленный кэш на диск
+    if cache_updated:
+        save_cache(cache)
         
     return vacancies, all_issues
 
