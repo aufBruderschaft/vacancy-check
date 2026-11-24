@@ -1,7 +1,9 @@
 source:
-  url: http://opendata.trudvsem.ru/api/v1/vacancies/region/39
+  url:  http://localhost:9999
   page_size: 100
   max_vacancies: 200
+  max_retries: 3  
+  retry_delay_seconds: 5
 schedule:
   every_hours: 24
 llm:
