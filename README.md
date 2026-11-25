@@ -74,8 +74,8 @@ vacancy-check/
 
 ## Установка
 
-Нужны Python 3.13 и [Ollama](https://ollama.com/download).
 Откройте терминал в папке проекта.
+Нужны Python 3.13 и [Ollama](https://ollama.com/download). Зависимости Python закреплены в requirements.txt. Откройте терминал в папке проекта.
 
 ### Windows PowerShell
 
@@ -103,7 +103,7 @@ python -m pip install -r requirements.txt
 
 ### Модель
 
-Запустите Ollama и загрузите модель:
+Запустите Ollama и загрузите модель (~7 ГБ, один раз):
 
 ```bash
 ollama pull gemma4:e2b
