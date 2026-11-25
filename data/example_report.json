@@ -1,0 +1,222 @@
+{
+  "generated_at": "2026-11-25T03:14:51.888527+02:00",
+  "mode": "check",
+  "model": "gemma4:e2b",
+  "vacancies": [
+    {
+      "id": "DEMO-39-001",
+      "url": null,
+      "issues": [],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-002",
+      "url": null,
+      "issues": [
+        {
+          "topic": "обязанности",
+          "type": "ambiguous",
+          "field": "duty",
+          "quote": "Выполнение различных поручений руководителя.",
+          "values": [],
+          "problem": "Не указан конкретный перечень задач, которые необходимо выполнять.",
+          "recommendation": "Какие именно поручения входят в работу?",
+          "source": "llm"
+        },
+        {
+          "topic": "график",
+          "type": "ambiguous",
+          "field": "schedule",
+          "quote": "Гибкий график",
+          "values": [],
+          "problem": "Не уточняется, как именно действует гибкий график (например, есть ли временные рамки или ограничения).",
+          "recommendation": "Как именно реализуется гибкий график?",
+          "source": "llm"
+        },
+        {
+          "topic": "оплата",
+          "type": "missing",
+          "field": "salary_min",
+          "quote": "",
+          "values": [],
+          "problem": "Зарплата не указана.",
+          "recommendation": "Уточнить у работодателя размер оплаты.",
+          "source": "rules"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-003",
+      "url": null,
+      "issues": [
+        {
+          "topic": "требования",
+          "type": "contradiction",
+          "field": "requirement.qualification",
+          "quote": "не менее 5 лет",
+          "values": [
+            "0",
+            "не менее 5 лет"
+          ],
+          "problem": "Опыт в поле: 0 г., а в тексте — «не менее 5 лет».",
+          "recommendation": "Уточнить, какой опыт на самом деле требуется.",
+          "source": "rules"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-004",
+      "url": null,
+      "issues": [
+        {
+          "topic": "место работы",
+          "type": "contradiction",
+          "field": "addresses",
+          "quote": "г. Калининград, ул. Учебная, д. 2",
+          "values": [
+            "Работа полностью дистанционная из любого города.",
+            "г. Калининград, ул. Учебная, д. 2"
+          ],
+          "problem": "Противоречие между указанием на конкретный адрес в Калининграде и заявлением о полной дистанционной работе из любого города.",
+          "recommendation": "Уточнить, где именно происходит работа (офис или полностью дистанционно).",
+          "source": "llm"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-005",
+      "url": null,
+      "issues": [],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-006",
+      "url": null,
+      "issues": [
+        {
+          "topic": "обязанности",
+          "type": "ambiguous",
+          "field": "duty",
+          "quote": "Работа с документами и другие задачи по необходимости.",
+          "values": [],
+          "problem": "Не указан конкретный перечень задач, которые должен выполнять специалист.",
+          "recommendation": "Какие именно задачи входят в обязанности?",
+          "source": "llm"
+        },
+        {
+          "topic": "требования",
+          "type": "ambiguous",
+          "field": "requirement.qualification",
+          "quote": "Условия обсуждаются на собеседовании.",
+          "values": [],
+          "problem": "Не указаны конкретные квалификационные требования.",
+          "recommendation": "Какие конкретные квалификационные требования предъявляются к кандидату?",
+          "source": "llm"
+        },
+        {
+          "topic": "название",
+          "type": "ambiguous",
+          "field": "job-name",
+          "quote": "Специалист",
+          "values": [],
+          "problem": "Название «Специалист» не говорит, чем человек будет заниматься.",
+          "recommendation": "Уточнить должность и направление работы.",
+          "source": "rules"
+        },
+        {
+          "topic": "оплата",
+          "type": "missing",
+          "field": "salary_max",
+          "quote": "",
+          "values": [],
+          "problem": "Указана только нижняя граница зарплаты: от 35000.",
+          "recommendation": "Уточнить верхнюю границу или фиксированную сумму.",
+          "source": "rules"
+        },
+        {
+          "topic": "график",
+          "type": "ambiguous",
+          "field": "schedule",
+          "quote": "Сменный график",
+          "values": [],
+          "problem": "График «Сменный график» указан без дней и часов.",
+          "recommendation": "Уточнить дни, часы работы и порядок смен.",
+          "source": "rules"
+        },
+        {
+          "topic": "место работы",
+          "type": "ambiguous",
+          "field": "addresses",
+          "quote": "Калининградская область",
+          "values": [],
+          "problem": "Указан только регион, без города и адреса.",
+          "recommendation": "Уточнить город и адрес рабочего места.",
+          "source": "rules"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-007",
+      "url": null,
+      "issues": [],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-008",
+      "url": null,
+      "issues": [
+        {
+          "topic": "график",
+          "type": "contradiction",
+          "field": "requirement.qualification",
+          "quote": "Пятидневная рабочая неделя с 09:00 до 18:00",
+          "values": [
+            "Гибкий график",
+            "Пятидневная рабочая неделя с 09:00 до 18:00"
+          ],
+          "problem": "Противоречие между указанием фиксированного графика (пятидневная рабочая неделя с 09:00 до 18:00) и указанием возможности гибкого графика без уточнения правил. Необходимо уточнить, как именно действует гибкость.",
+          "recommendation": "Уточнить, как именно действует гибкий график.",
+          "source": "llm"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-009",
+      "url": null,
+      "issues": [],
+      "llm_checked": true,
+      "llm_status": "model"
+    },
+    {
+      "id": "DEMO-39-010",
+      "url": null,
+      "issues": [
+        {
+          "topic": "место работы",
+          "type": "ambiguous",
+          "field": "requirement.qualification",
+          "quote": "Формат и адрес рабочего места уточняются при собеседовании.",
+          "values": [],
+          "problem": "Не уточнено формат и адрес рабочего места.",
+          "recommendation": "Уточнить формат и адрес рабочего места.",
+          "source": "llm"
+        }
+      ],
+      "llm_checked": true,
+      "llm_status": "model"
+    }
+  ]
+}

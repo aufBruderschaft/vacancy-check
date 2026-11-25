@@ -7,9 +7,11 @@ source:
 schedule:
   every_hours: 24
 llm:
-  enabled: false            # true, когда подключён llm.py
+  enabled: true             # ИИ подключён через OpenAI-совместимый API
   base_url: http://localhost:11434/v1
-  model: gemma4:e2b
+  model: gemma4:e2b          # от 16 ГБ памяти можно gemma4:e4b — меньше ложных замечаний
   api_key_env: LLM_API_KEY
+  max_tokens: 2048          # лимит длины ответа модели
+  reasoning_effort: none    # без «размышлений»: быстрее и не обрывает ответ
 output:
   report_path: reports/report.json

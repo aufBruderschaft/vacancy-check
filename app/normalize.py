@@ -44,13 +44,29 @@ def normalize(vacancy):
     record['benefits'] = join_benefits(vacancy)
     raw = json.dumps(record, sort_keys=True, ensure_ascii=False)
     record['content_hash'] = hashlib.sha1(raw.encode('utf-8')).hexdigest()
+    source_texts = {}
+    for path in FIELDS:
+        value = get_path(vacancy, path)
+        if isinstance(value, str) and value.strip():
+            source_texts[path] = [value]
+    addresses = get_path(vacancy, 'addresses.address') or []
+    if isinstance(addresses, dict):
+        addresses = [addresses]
+    if isinstance(addresses, list):
+        locations = [item.get('location') for item in addresses if isinstance(item, dict)]
+        source_texts['addresses'] = [x for x in locations if isinstance(x, str) and x.strip()]
+    source_texts['benefits'] = [vacancy[k] for k in ('benefit', 'benefitDetails')
+                                if isinstance(vacancy.get(k), str) and vacancy[k].strip()]
+    record['_source_texts'] = source_texts
     return record
 
 def normalize_all(vacancies):
     records = {}
-    for vacancy in vacancies:
+    for index, vacancy in enumerate(vacancies, 1):
         record = normalize(vacancy)
-        if record['id']:
-            records[record['id']] = record
+        identifier = record['id']
+        if isinstance(identifier, bool) or not isinstance(identifier, (str, int)) or not str(identifier).strip():
+            raise ValueError(f'Вакансия {index}: отсутствует корректный id')
+        record['id'] = str(identifier).strip()
+        records[record['id']] = record
     return list(records.values())
-

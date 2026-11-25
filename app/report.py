@@ -16,14 +16,19 @@ def save_report(vacancies, issues_dict, mode, model, report_path):
         if not v_id:
             continue
 
-        report_data["vacancies"].append({
+        item = {
             "id": v_id,
-            "url": v.get("vac_url", ""), 
+            "url": v.get("vac_url", ""),
             "issues": issues_dict.get(v_id, [])
-        })
+        }
+        if "_llm_checked" in v:
+            item["llm_checked"] = v["_llm_checked"]
+        if "_llm_status" in v:
+            item["llm_status"] = v["_llm_status"]
+        report_data["vacancies"].append(item)
 
     # временный файл
-    os.makedirs(os.path.dirname(report_path), exist_ok=True)
+    os.makedirs(os.path.dirname(report_path) or ".", exist_ok=True)
     tmp_path = report_path + ".tmp"
     
     with open(tmp_path, "w", encoding="utf-8") as f:

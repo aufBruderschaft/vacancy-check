@@ -11,6 +11,8 @@ from app.normalize import normalize_all
 from app.rules import check_rules
 
 from app.report import save_report
+from app.llm import analyze_vacancy, validate_quotes, cache_key as llm_cache_key, LLMError, LLMUnavailable, LLMAllRejected
+from app.ai_support import filter_rule_duplicates
 
 CACHE_PATH = "reports/cache.json"
 
@@ -34,19 +36,28 @@ def load_cache():
 
 def save_cache(cache):
     os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
-    with open(CACHE_PATH, "w", encoding="utf-8") as f:
+    tmp_path = CACHE_PATH + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, CACHE_PATH)
 
 def run_pipeline(raw_data, mode, cfg):
     vacancies = normalize_all(raw_data)
     all_issues = {}
     
-    cache = load_cache()
+    cache_enabled = bool(cfg['llm'].get('enabled'))
+    if cache_enabled and os.path.abspath(CACHE_PATH) == os.path.abspath(cfg['output']['report_path']):
+        cache_enabled = False
+        logger.warning("Путь кэша совпадает с отчётом; кэш отключён")
+    cache = load_cache() if cache_enabled else {}
+    if not isinstance(cache, dict):
+        logger.warning("Некорректный формат кэша, используем пустой")
+        cache = {}
     cache_updated = False
+    llm_unavailable = False
 
-    for v in vacancies:
+    for index, v in enumerate(vacancies):
         v_id = v['id']
-        v_hash = v.get('content_hash') 
         issues = []
 
         # Правила 
@@ -55,30 +66,57 @@ def run_pipeline(raw_data, mode, cfg):
         except Exception as e:
             logger.error(f"Ошибка в правилах для {v_id}: {e}")
 
-        # LLM 
-        cache_key = f"{cfg['llm']['model']}:{v_hash}" if v_hash else None
-        try:
-            if cache_key and cache_key in cache:
-                # Хэш не изменился
-                issues.extend(cache[cache_key])
-            else:
-                # None = модель не запускалась или упала. Такой результат НЕ кэшируем,
-                # иначе вакансия навсегда останется «проверенной» без проверки.
+        # LLM: None или исключение — сбой, [] — успешный ответ без замечаний.
+        v['_llm_checked'] = False
+        v['_llm_status'] = 'disabled'
+        budget = cfg['llm'].get('max_vacancies_for_ai')
+        within_budget = budget is None or index < max(0, int(budget))
+        if cfg['llm'].get('enabled') and not within_budget:
+            v['_llm_status'] = 'skipped_limit'
+        if cfg['llm'].get('enabled') and within_budget:
+            v['_llm_status'] = 'error'
+            try:
+                cache_key = llm_cache_key(v, cfg['llm']) if cache_enabled else None
                 llm_issues = None
-
-                # ПРИМЕРНО БУДЕТ ТАК
-                # if cfg['llm'].get('enabled'):
-                #     llm_issues = analyze_vacancy(v, cfg['llm'])
-                #     llm_issues = validate_quotes(llm_issues, v)
+                if cache_key and cache_key in cache:
+                    try:
+                        llm_issues = validate_quotes(cache[cache_key], v)
+                        if llm_issues is None:
+                            raise LLMError("Пустая запись кэша")
+                    except LLMError as e:
+                        logger.warning(f"Некорректная запись кэша для {v_id}: {e}")
+                        cache.pop(cache_key, None)
+                        cache_updated = True
+                        llm_issues = None
 
                 if llm_issues is not None:
-                    issues.extend(llm_issues)
-                    if cache_key:
+                    v['_llm_status'] = 'cache'
+                    logger.info("LLM: использован кэш для %s (%d замечаний)", v_id, len(llm_issues))
+                if llm_issues is None and not llm_unavailable:
+                    try:
+                        llm_issues = analyze_vacancy(v, cfg['llm'])
+                        llm_issues = validate_quotes(llm_issues, v)
+                    except LLMAllRejected as e:
+                        # Модель ответила, но ни одно замечание не подтвердилось цитатой:
+                        # в отчёт ничего не попадает, это обычный ответ «замечаний нет».
+                        logger.info(f"LLM: для {v_id} все замечания модели отклонены проверкой ({e})")
+                        llm_issues = []
+                    if llm_issues is not None:
+                        v['_llm_status'] = 'model'
+                        logger.info("LLM: проверена вакансия %s (%d замечаний)", v_id, len(llm_issues))
+                    if llm_issues is not None and cache_key:
                         cache[cache_key] = llm_issues
                         cache_updated = True
-                    
-        except Exception as e:
-            logger.warning(f"Ошибка LLM для {v_id}, пропускаем: {e}")
+
+                if llm_issues is not None:
+                    issues.extend(filter_rule_duplicates(llm_issues, issues))
+                    v['_llm_checked'] = True
+            except LLMUnavailable as e:
+                # Другие вакансии всё ещё могут использовать ранее успешный кэш.
+                llm_unavailable = True
+                logger.warning(f"Сервис LLM недоступен в этом запуске: {e}")
+            except Exception as e:
+                logger.warning(f"Ошибка LLM для {v_id}, пропускаем: {e}")
 
         # 3. ДЕДУПЛИКАЦИЯ (импортируй функцию из report.py)
         from app.report import deduplicate_issues
@@ -88,7 +126,10 @@ def run_pipeline(raw_data, mode, cfg):
 
     # Сохраняем обновленный кэш на диск
     if cache_updated:
-        save_cache(cache)
+        try:
+            save_cache(cache)
+        except (OSError, TypeError, ValueError) as e:
+            logger.warning(f"Не удалось сохранить кэш LLM: {e}")
         
     return vacancies, all_issues
 
@@ -117,19 +158,24 @@ def main():
     # Парсер аргументов (создает args)
     parser = argparse.ArgumentParser(description="Vacancy Checker")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("run", help="Запуск через API")
+    run_parser = subparsers.add_parser("run", help="Запуск через API")
     check_parser = subparsers.add_parser("check", help="Проверка локального JSON")
     check_parser.add_argument("--input", required=True, help="Путь к файлу")
-    subparsers.add_parser("schedule", help="Работа по расписанию")
+    schedule_parser = subparsers.add_parser("schedule", help="Работа по расписанию")
+    for command_parser in (run_parser, check_parser, schedule_parser):
+        command_parser.add_argument("--config", default="config.yaml", help="Путь к YAML-конфигурации")
+        command_parser.add_argument("--no-ai", action="store_true", help="Отключить ИИ")
     args = parser.parse_args()
-    cfg = load_config()
-    report_model = cfg['llm']['model'] if cfg['llm'].get('enabled') else None
+    cfg = load_config(args.config)
+    if args.no_ai:
+        cfg['llm']['enabled'] = False
 
     try:
         if args.command == "run":
             logger.info("Запуск через API...")
             raw = fetch_with_retries(cfg) 
             vacancies, issues = run_pipeline(raw, mode="api", cfg=cfg)
+            report_model = cfg['llm']['model'] if any(v.get('_llm_checked') for v in vacancies) else None
             save_report(vacancies, issues, mode="api", model=report_model, report_path=cfg['output']['report_path'])
             logger.info(f"Обработано вакансий: {len(issues)}")
 
@@ -137,18 +183,22 @@ def main():
             logger.info(f"Запуск проверки файла: {args.input}")
             raw = load_local(args.input)
             vacancies, issues = run_pipeline(raw, mode="check", cfg=cfg)
+            report_model = cfg['llm']['model'] if any(v.get('_llm_checked') for v in vacancies) else None
             save_report(vacancies, issues, mode="check", model=report_model, report_path=cfg['output']['report_path'])
             logger.info(f"Обработано вакансий: {len(issues)}")
 
         elif args.command == "schedule":
             logger.info("Запуск по расписанию...")
             hours = cfg['schedule']['every_hours']
+            if not isinstance(hours, (int, float)) or isinstance(hours, bool) or hours <= 0:
+                raise ValueError('schedule.every_hours должен быть положительным числом')
             logger.info(f"Интервал: каждые {hours} часов. (Нажми Ctrl+C для выхода)")
             while True:
                 try:
                     logger.info("Плановая загрузка данных...")
                     raw = fetch_with_retries(cfg)
                     vacancies, issues = run_pipeline(raw, mode="api", cfg=cfg)
+                    report_model = cfg['llm']['model'] if any(v.get('_llm_checked') for v in vacancies) else None
                     save_report(vacancies, issues, mode="api", model=report_model, report_path=cfg['output']['report_path'])
                     logger.info(f"Плановый отчет сохранен. Ждем {hours} ч. ...")
                     time.sleep(hours * 3600)
@@ -158,7 +208,7 @@ def main():
                 except Exception as e:
                     # если тут, то все ретраи провалились
                     logger.error(f"Не удалось получить данные: {e}. Ждем следующего планового запуска.")
-                    time.sleep(hours * 3600) # если API совсем лег, ждем до следующего часа
+                    time.sleep(min(hours, 1) * 3600)  # API лёг — пробуем снова через час
     except KeyboardInterrupt:
         logger.info("\nРабота остановлена пользователем (Ctrl+C)")
         sys.exit(0)
