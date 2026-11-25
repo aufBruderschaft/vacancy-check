@@ -36,8 +36,8 @@ vacancy-check/
 ## Ссылки
 
 - Репозиторий: https://github.com/aufBruderschaft/vacancy-check
-- Проверенный коммит: [ссылка или SHA]
-- Видео демонстрации: [публичная ссылка]
+- Проверенный коммит: e9b6777c8376d8eb16eb7d4065a13ee622fd9238
+- Видео демонстрации: https://drive.google.com/drive/folders/1srHnW_JEVreIYPP0ojTy3mUtfA1eFtUI?usp=sharing
 - Учебные данные: `data/kantkod_sample_vacancies.json`
 - Пример отчёта: `data/example_report.json`
 
