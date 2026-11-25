@@ -20,14 +20,14 @@ class DeliveryRegressions(unittest.TestCase):
         self.assertEqual(result[0]['duty'], 'last')
 
     def test_ai_quote_must_be_a_substring_of_original(self):
-        raw = {'id': 'test', 'duty': 'Работа  с\nдокументами'}
+        raw = {'id': 'test', 'duty': 'Другие  задачи\nпо необходимости'}
         v = normalize(raw)
         issue = {'topic': 'обязанности', 'type': 'ambiguous', 'field': 'duty',
-                 'quote': 'Работа  с\nдокументами', 'values': [],
+                 'quote': 'Другие  задачи\nпо необходимости', 'values': [],
                  'problem': 'Неясны задачи', 'recommendation': 'Какие задачи?'}
         self.assertEqual(validate_quotes([issue], v)[0]['quote'], issue['quote'])
         with self.assertRaises(LLMError):
-            validate_quotes([{**issue, 'quote': 'Работа с документами'}], v)
+            validate_quotes([{**issue, 'quote': 'Другие задачи по необходимости'}], v)
         other = normalize({'id': 'test', 'duty': 'Работа с документами'})
         self.assertNotEqual(cache_key(v, {'model': 'test', 'base_url': 'http://localhost/v1'}), cache_key(other, {'model': 'test', 'base_url': 'http://localhost/v1'}))
 

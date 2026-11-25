@@ -30,6 +30,18 @@ TEXT_FIELDS = (
 )
 CONTEXT_FIELDS = TEXT_FIELDS + ('salary_min', 'salary_max', 'requirement.experience', 'shift')
 
+# Поля-категории из справочника API, а не свободный текст: их проверяют правила.
+# Модель на них даёт ложные замечания («Полный рабочий день — не указаны часы»).
+STRUCTURED_FIELDS = frozenset({'schedule', 'employment', 'salary', 'job-name', 'addresses',
+                               'requirement.education', 'skills'})
+# Замечание «неясно» принимается, только если в цитате есть размытая формулировка.
+# Модель предлагает, код проверяет: так отсекаются придирки к нормальному тексту.
+VAGUE_MARKERS = re.compile(
+    r'друг\w*\s+задач|различн|прочи[ехй]|\bины[ехй]\b|по необходимости|при необходимости|'
+    r'и т\.?\s?[дп]\b|сопутствующ|поручени|уточня|обсужда|по договор[её]нност|по согласовани|'
+    r'достойн|конкурентн|стабильн|гибк|возможн|стрессоустойчив|коммуникабельн|'
+    r'ответственност|активност|желани|готовност|динамичн|перспектив', re.I)
+
 # Structured output: Ollama заставляет модель вернуть JSON ровно этой формы —
 # все поля на месте, темы и типы только из списка, field — только реальный ключ.
 RESPONSE_SCHEMA = {
@@ -275,8 +287,26 @@ def _check_issue(item, source_fields, is_original, v):
     values = [x.strip() for x in values]
     if kind == 'ambiguous' and values:
         raise LLMError('Для ambiguous values должен быть пустым')
+    if kind == 'ambiguous':
+        if field in STRUCTURED_FIELDS:
+            raise LLMError('Поле-категорию проверяют правила')
+        if not VAGUE_MARKERS.search(quote):
+            raise LLMError('В цитате нет размытой формулировки')
     if kind == 'contradiction' and quote not in values:
         values = values + [quote]
+    if kind == 'contradiction':
+        schedule_value = str(v.get('schedule') or '')
+        # «Полный рабочий день» и конкретные часы не противоречат друг другу;
+        # противоречие с категорией графика возможно только для «гибкого».
+        if schedule_value and schedule_value in values and not re.search(r'гибк', schedule_value, re.I):
+            raise LLMError('Категория графика не противоречит конкретным часам')
+        # Значение только из справочного поля (зарплата-число, образование-категория)
+        # не противопоставляем тексту: модель тут путает формат с противоречием.
+        # Исключения: адрес (удалёнка против офиса) и «гибкий» график.
+        for value in values:
+            homes = {name for name, text in source_fields.items() if value in text}
+            if homes and homes <= (STRUCTURED_FIELDS - {'addresses', 'schedule'}):
+                raise LLMError('Справочное поле не противоречит тексту')
     if kind == 'contradiction':
         if (len(set(values)) < 2 or quote not in values or
                 any(not value or not any(value in text and is_original(field_name, value)
@@ -287,6 +317,13 @@ def _check_issue(item, source_fields, is_original, v):
         fields_used = {name for value in values for name, text in source_fields.items() if value in text}
         if len(fields_used) < 2:
             raise LLMError('Противоречие должно быть между разными полями')
+    if kind == 'contradiction' and field in STRUCTURED_FIELDS:
+        for value in values:
+            free = [name for name, text in source_fields.items()
+                    if name not in STRUCTURED_FIELDS and value in text]
+            if free:
+                field, quote = free[0], value
+                break
     return {'topic': topic, 'type': kind, 'field': field, 'quote': quote,
             'values': values, 'problem': problem, 'recommendation': recommendation,
             'source': 'llm'}
