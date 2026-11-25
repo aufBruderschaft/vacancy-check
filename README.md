@@ -124,7 +124,8 @@ ollama pull gemma4:e2b
 | `llm.model` | Название модели |
 | `output.report_path` | Путь к отчёту |
 
-<img width="515" height="322" alt="изображение" src="https://github.com/user-attachments/assets/72da1e44-5c11-4f92-9159-ce67c561d6e2" />
+
+<img width="618" height="342" alt="Снимок экрана 2026-11-25 093539" src="https://github.com/user-attachments/assets/a27602e2-3735-4819-bce6-40e8c7a33344" />
 
 
 ## Запуск
