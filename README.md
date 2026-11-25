@@ -101,7 +101,7 @@ python -m pip install -r requirements.txt
 
 ### Модель
 
-Запустите Ollama и загрузите модель (~7 ГБ, один раз):
+Запустите Ollama и загрузите модель:
 
 ```bash
 ollama pull gemma4:e2b
