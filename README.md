@@ -1,5 +1,3 @@
-# vacancy-check
-
 # Vacancy Check
 
 Vacancy Check забирает вакансии Калининградской области с портала «Работа России» (или из локального JSON-файла) и находит в них то, что соискателю непонятно: пропущенные сведения, размытые формулировки и противоречия между полями. Для каждой находки в JSON-отчёте указано, в каком поле проблема, цитата из вакансии и что именно стоит уточнить у работодателя. Проверку делают правила и локальная языковая модель, запускается вручную или по расписанию.
@@ -108,8 +106,8 @@ python -m pip install -r requirements.txt
 ```bash
 ollama pull gemma4:e2b
 ```
+<img width="1321" height="194" alt="изображение" src="https://github.com/user-attachments/assets/c5ee2b57-97c6-4c3d-b6fb-6ae24d3c0657" />
 
-[Вставить скриншот установки модели.]
 
 ## Настройки
 
@@ -126,15 +124,23 @@ ollama pull gemma4:e2b
 | `llm.model` | Название модели |
 | `output.report_path` | Путь к отчёту |
 
-[Вставить скриншот настроек.]
+<img width="515" height="322" alt="изображение" src="https://github.com/user-attachments/assets/72da1e44-5c11-4f92-9159-ce67c561d6e2" />
+
 
 ## Запуск
+
+<img width="553" height="313" alt="изображение" src="https://github.com/user-attachments/assets/1db4dbc6-97e6-43e9-b9e2-820b3a104bb1" />
+
 
 Проверка локального файла:
 
 ```bash
 python main.py check --input data/kantkod_sample_vacancies.json
 ```
+Пример запуска с ИИ: в журнале видно, что часть замечаний модели была отклонена проверкой.
+
+<img width="1683" height="620" alt="изображение" src="https://github.com/user-attachments/assets/361a485f-65c1-4629-98f5-04136f423e4d" />
+
 
 Загрузка через API:
 
@@ -156,7 +162,8 @@ python main.py schedule
 python main.py check --input data/kantkod_sample_vacancies.json --no-ai
 ```
 
-[Вставить скриншот запуска.]
+<img width="1184" height="126" alt="изображение" src="https://github.com/user-attachments/assets/15230c84-f4c4-4783-b37e-f09ade0d788f" />
+
 
 ## Результат
 
@@ -164,7 +171,8 @@ python main.py check --input data/kantkod_sample_vacancies.json --no-ai
 
 В каждом замечании `source: rules` обозначает правило, `source: llm` — модель. У каждой вакансии также есть `llm_checked` и `llm_status`. Статус `model` означает обработку ответа модели в текущем запуске, `cache` — использование кэша, `disabled` — отключённый ИИ, `error` — ошибку обработки модели, `skipped_limit` — пропуск ИИ по лимиту. Проверяйте не только статус, но и сами замечания.
 
-[Вставить скриншот фрагмента отчёта.]
+<img width="648" height="251" alt="изображение" src="https://github.com/user-attachments/assets/948d2495-dce9-4550-b8de-92c036e2ef35" />
+
 
 ## Проверка
 
